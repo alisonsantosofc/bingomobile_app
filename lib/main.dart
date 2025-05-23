@@ -10,8 +10,27 @@ class BingoClientApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: BingoCardScreen(),
+    return MaterialApp(
+      themeMode: ThemeMode.dark,
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        primaryColor: Colors.teal,
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.white),
+          bodyMedium: TextStyle(color: Colors.white70),
+        ),
+      ),
+      theme: ThemeData(
+        fontFamily: 'Poppins',
+      ),
+      home: const BingoCardScreen(),
     );
   }
 }
@@ -26,7 +45,7 @@ class BingoCardScreen extends StatefulWidget {
 class _BingoCardScreenState extends State<BingoCardScreen> {
   WebSocket? socket;
   List<int> drawnNumbers = [];
-  late List<List<int?>> myCard; // int? para permitir null no espaço livre
+  late List<List<int?>> myCard;
   Set<int> marked = {};
   String serverIp = '';
   final ipController = TextEditingController();
@@ -52,9 +71,13 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
         final decoded = jsonDecode(data);
 
         if (decoded['type'] == 'DRAW') {
-          setState(() {
-            drawnNumbers.add(decoded['number']);
-          });
+          final rawNumber = decoded['number'];
+          final number = rawNumber is int ? rawNumber : int.tryParse(rawNumber.toString());
+          if (number != null) {
+            setState(() {
+              drawnNumbers.add(number);
+            });
+          }
         } else if (decoded['type'] == 'BINGO_RESULT') {
           final result = decoded['result'];
           final message = result == 'WIN' ? '🎉 BINGO! Você ganhou!' : '❌ Ainda não foi dessa vez.';
@@ -74,7 +97,19 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
         }
       });
     } catch (e) {
-      print('Erro ao conectar: $e');
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Erro de Conexão'),
+          content: Text('Não foi possível conectar ao IP "$ip".\n\nErro: $e'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            )
+          ],
+        ),
+      );
     }
   }
 
@@ -89,54 +124,28 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
     }
   }
 
-  void _showBingoResult(bool success, String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(success ? 'BINGO!' : 'Tentativa Inválida'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              if (success) {
-                // Opcional: desconectar ou resetar o jogo
-              }
-            },
-            child: const Text('OK'),
-          )
-        ],
-      ),
-    );
-  }
-
-  void _showGameOver(String winner) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Jogo Encerrado'),
-        content: Text('O vencedor foi: $winner'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Opcional: desconectar ou resetar o jogo
-            },
-            child: const Text('OK'),
-          )
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final headerColors = [
+      Colors.redAccent,
+      Colors.amber,
+      Colors.greenAccent,
+      Colors.blueAccent,
+      Colors.deepPurpleAccent,
+    ];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Minha Cartela')),
+      appBar: AppBar(title: const Text(
+        'Bingo Family',
+        style: TextStyle(
+          fontSize: 32,
+          color: Colors.red,
+          fontWeight: FontWeight.bold,
+        ),
+      )),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // IP input e botão conectar
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
@@ -145,31 +154,39 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
                     child: TextField(
                       controller: ipController,
                       decoration: const InputDecoration(labelText: 'IP da TV'),
+                      enabled: socket == null,
                     ),
                   ),
-                  ElevatedButton(
-                    onPressed: () => connect(ipController.text),
-                    child: const Text('Conectar'),
-                  )
+                  const SizedBox(width: 8),
+                  if (socket == null)
+                    ElevatedButton(
+                      onPressed: () => connect(ipController.text),
+                      child: const Text('Conectar'),
+                    ),
+                  if (socket != null)
+                    const Text('✅ Conectado', style: TextStyle(color: Colors.green)),
                 ],
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Cabeçalhos B I N G O
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: headers.map((h) {
+                children: headers.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final h = entry.value;
+
                   return Expanded(
                     child: Center(
                       child: Text(
                         h,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: headerColors[i % headerColors.length], // usa cor diferente por letra
                         ),
                       ),
                     ),
@@ -180,7 +197,6 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
 
             const SizedBox(height: 8),
 
-            // Grid 5x5 dos números
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Column(
@@ -195,39 +211,46 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
 
                       return Expanded(
                         child: GestureDetector(
-                          onTap: (isDrawn && !isFree)
-                              ? () {
-                                  setState(() {
-                                    if (marked.contains(n)) {
-                                      marked.remove(n);
-                                    } else {
-                                      marked.add(n!);
-                                    }
-                                  });
-                                }
-                              : null,
+                          onTap: isFree
+                            ? null
+                            : () {
+                                setState(() {
+                                  if (marked.contains(n)) {
+                                    marked.remove(n);
+                                  } else {
+                                    marked.add(n);
+                                  }
+                                });
+                              },
                           child: Container(
                             margin: const EdgeInsets.all(4),
                             height: 48,
                             decoration: BoxDecoration(
                               color: isFree
-                                  ? Colors.blueGrey
+                                  ? Colors.amber[600]
                                   : isMarked
-                                      ? Colors.green
+                                      ? Colors.teal
                                       : isDrawn
-                                          ? Colors.yellow
-                                          : Colors.grey[300],
+                                          ? Colors.red[600]
+                                          : Colors.grey[700],
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.black),
+                              border: Border.all(color: Colors.white24),
                             ),
                             child: Center(
-                              child: Text(
-                                isFree ? '★' : '$n',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              child: isFree
+                                  ? const Icon(
+                                      Icons.star,
+                                      size: 18,
+                                      color: Colors.white,
+                                    )
+                                  : Text(
+                                      '$n',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ),
                         ),
@@ -276,7 +299,7 @@ List<List<int?>> generateCard() {
     }
 
     final column = numbers.toList();
-    if (i == 2) column[2] = null; // Espaço livre no centro da coluna N
+    if (i == 2) column[2] = null;
     card.add(column);
   }
 
