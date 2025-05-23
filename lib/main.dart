@@ -23,8 +23,8 @@ class BingoClientApp extends StatelessWidget {
           ),
         ),
         textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.white),
-          bodyMedium: TextStyle(color: Colors.white70),
+          bodyLarge: TextStyle(fontFamily: 'Poppins', color: Colors.white),
+          bodyMedium: TextStyle(fontFamily: 'Poppins', color: Colors.white70),
         ),
       ),
       theme: ThemeData(
@@ -127,19 +127,20 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
   @override
   Widget build(BuildContext context) {
     final headerColors = [
-      Colors.redAccent,
-      Colors.amber,
-      Colors.greenAccent,
-      Colors.blueAccent,
-      Colors.deepPurpleAccent,
+      Colors.teal[300],
+      Colors.teal[400],
+      Colors.teal[500],
+      Colors.teal[600],
+      Colors.teal[700],
     ];
 
     return Scaffold(
       appBar: AppBar(title: const Text(
         'Bingo Family',
         style: TextStyle(
+          fontFamily: 'Poppins',
           fontSize: 32,
-          color: Colors.red,
+          color: Colors.teal,
           fontWeight: FontWeight.bold,
         ),
       )),
@@ -164,7 +165,7 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
                       child: const Text('Conectar'),
                     ),
                   if (socket != null)
-                    const Text('✅ Conectado', style: TextStyle(color: Colors.green)),
+                    const Text('✅ Conectado', style: TextStyle(fontFamily: 'Poppins', color: Colors.green)),
                 ],
               ),
             ),
@@ -184,6 +185,7 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
                       child: Text(
                         h,
                         style: TextStyle(
+                          fontFamily: 'Poppins',
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
                           color: headerColors[i % headerColors.length], // usa cor diferente por letra
@@ -246,6 +248,7 @@ class _BingoCardScreenState extends State<BingoCardScreen> {
                                   : Text(
                                       '$n',
                                       style: const TextStyle(
+                                        fontFamily: 'Poppins',
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                         color: Colors.white,
